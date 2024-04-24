@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Songs App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>  
+</head>
+<body>
+  <div id="root"></div>  
+  <script type="text/babel">
+    const SongList = ({ songs, onDeleteSong, onUpdateSong }) => {
+      return (
+        <ul>
+          {songs.map((song) => (
+            <li key={song.id}>
+              {song.title} - {song.artist}
+              <button onClick={() => onDeleteSong(song.id)}>Delete</button>
+              <button onClick={() => onUpdateSong(song)}>Update</button>
+            </li>
+          ))}
+        </ul>
+      );
+    };
+
+    const SongForm = ({ onSubmit }) => {
+      let titleInput, artistInput;
+      return (
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit({
+            title: titleInput.value,
+            artist: artistInput.value,
+          });
+          titleInput.value = '';
+          artistInput.value = '';
+        }}>
+          <input type="text" ref={(input) => { titleInput = input; }} placeholder="Title" />
+          <input type="text" ref={(input) => { artistInput = input; }} placeholder="Artist" />
+          <button type="submit">Add Song</button>
+        </form>
+      );
+    };
+
+    const App = () => {
+      const [songs, setSongs] = React.useState([]);
+
+      const fetchSongs = async () => {
+        const response = await fetch('/api/songs');
+        const data = await response.json();
+        setSongs(data);
+      };
+
+      const addSong = async (song) => {
+        const response = await fetch('/api/songs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(song),
+        });
+        const newSong = await response.json();
+        setSongs([...songs, newSong]);
+      };
+
+      const deleteSong = async (id) => {
+        await fetch(`/api/songs/${id}`, {
+          method: 'DELETE',
+        });
+        setSongs(songs.filter((song) => song.id !== id));
+      };
+
+      const updateSong = async (song) => {
+        const response = await fetch(`/api/songs/${song.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(song),
+        });
+        const updatedSong = await response.json();
+        setSongs(songs.map((s) => (s.id === updatedSong.id ? updatedSong : s)));
+      };
+
+      React.useEffect(() => {
+        fetchSongs();
+      }, []);
+
+      return (
+        <div>
+          <h1>Songs</h1>
+          <SongForm onSubmit={addSong} />
+          <SongList songs={songs} onDeleteSong={deleteSong} onUpdateSong={updateSong} />
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
